@@ -59,50 +59,43 @@ def _build_payload(alerts):
     risk_counts = _count_risks(alerts)
     total_alerts = len(alerts)
     critical_count = risk_counts.get("Critical", 0)
-    title_prefix = "[CRITICAL] " if critical_count else ""
-    text = f"{title_prefix}OWASP ZAP alert summary: {total_alerts} alert(s)"
+    high_count = risk_counts.get("High", 0)
 
-    blocks = [
-        {
-            "type": "header",
-            "text": text,
-        },
-        {
-            "type": "summary",
-            "fields": {
-                "total_alerts": total_alerts,
-                "critical": critical_count,
-                "high": risk_counts.get("High", 0),
-                "medium": risk_counts.get("Medium", 0),
-                "low": risk_counts.get("Low", 0),
-                "informational": risk_counts.get("Informational", 0),
-            },
-        },
-    ]
+    title_prefix = "🚨 CRITICAL - " if critical_count else "⚠️ "
+    title = f"{title_prefix}OWASP ZAP Alert Summary"
 
     if not alerts:
-        blocks.append(
-            {
-                "type": "section",
-                "title": "No alerts received",
-                "text": "The alert list was empty.",
-            }
-        )
-        return {"text": text, "blocks": blocks}
+        return {
+            "content": "✅ OWASP ZAP scan processed. No High or Critical alerts found."
+        }
+
+    lines = [
+        f"**{title}**",
+        "",
+        f"**Total alerts:** {total_alerts}",
+        f"**Critical:** {critical_count}",
+        f"**High:** {high_count}",
+        "",
+        "**Findings:**"
+    ]
 
     for index, alert in enumerate(alerts[:MAX_ALERT_BLOCKS], start=1):
-        blocks.append(_alert_block(index, alert))
+        name = _first_value(alert, "alert", "name", "title") or f"Alert {index}"
+        risk = _first_value(alert, "risk", "riskdesc", "severity") or "Unknown"
+        url = _first_value(alert, "url", "uri", "endpoint") or "N/A"
+
+        lines.append(f"{index}. **{_shorten(name, 120)}**")
+        lines.append(f"   - Risk: `{_shorten(risk, 60)}`")
+        lines.append(f"   - URL: {_shorten(url, 180)}")
 
     remaining = total_alerts - MAX_ALERT_BLOCKS
     if remaining > 0:
-        blocks.append(
-            {
-                "type": "context",
-                "text": f"{remaining} additional alert(s) omitted from the visual blocks.",
-            }
-        )
+        lines.append("")
+        lines.append(f"...and {remaining} more alert(s).")
 
-    return {"text": text, "blocks": blocks}
+    return {
+        "content": "\n".join(lines)
+    }
 
 
 def _alert_block(index, alert):
