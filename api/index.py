@@ -2,8 +2,8 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler
 
-from parser import parse_zap_report
-from notifier import dispatch_alert
+from api.parser import parse_zap_report
+from api.notifier import dispatch_alert
 
 
 class handler(BaseHTTPRequestHandler):
